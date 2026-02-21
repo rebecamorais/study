@@ -1,4 +1,4 @@
-import tf from '@tensorflow/tfjs-node';
+import tf, { model } from '@tensorflow/tfjs-node';
 
 // Exemplo de pessoas para treino (cada pessoa com idade, cor e localização)
 // const pessoas = [
@@ -6,6 +6,15 @@ import tf from '@tensorflow/tfjs-node';
 //     { nome: "Ana", idade: 25, cor: "vermelho", localizacao: "Rio" },
 //     { nome: "Carlos", idade: 40, cor: "verde", localizacao: "Curitiba" }
 // ];
+
+// Labels das categorias a serem previstas (one-hot encoded)
+// [premium, medium, basic]
+const labelsNomes = ["premium", "medium", "basic"]; // Ordem dos labels
+const tensorLabels = [
+    [1, 0, 0], // premium - Erick
+    [0, 1, 0], // medium - Ana
+    [0, 0, 1]  // basic - Carlos
+];
 
 async function trainModel(inputXs, outputYs) {
     const model = tf.sequential();
@@ -46,6 +55,25 @@ async function trainModel(inputXs, outputYs) {
     return model;
 }
 
+async function predict(model, inputList) {
+    console.log(inputList);
+
+    const tfInput = tf.tensor2d(inputList); // Monta o input pro modelo
+
+    const prediction = model.predict(tfInput);
+
+    const predArray = await prediction.array();
+    return predArray[0].map((prob, index) => {
+        return {
+            index,
+            label: labelsNomes[index],
+            prob,
+        }
+    });
+    // const predictedClass = prediction.argMax(1).dataSync()[0];
+    // return labelsNomes[predictedClass];
+}
+
 // Usamos apenas os dados numéricos, como a rede neural só entende números.
 // tensorPessoasNormalizado corresponde ao dataset de entrada do modelo.
 const tensorPessoasNormalizado = [
@@ -54,17 +82,56 @@ const tensorPessoasNormalizado = [
     [1, 0, 0, 1, 0, 0, 1]     // Carlos
 ]
 
-// Labels das categorias a serem previstas (one-hot encoded)
-// [premium, medium, basic]
-const labelsNomes = ["premium", "medium", "basic"]; // Ordem dos labels
-const tensorLabels = [
-    [1, 0, 0], // premium - Erick
-    [0, 1, 0], // medium - Ana
-    [0, 0, 1]  // basic - Carlos
-];
-
 // Criamos tensores de entrada (xs) e saída (ys) para treinar o modelo
 const inputXs = tf.tensor2d(tensorPessoasNormalizado)
 const outputYs = tf.tensor2d(tensorLabels)
 
-const models = trainModel(inputXs, outputYs);
+const myModel = await trainModel(inputXs, outputYs);
+
+const pRebeca = {
+    nome: "Rebeca",
+    idade: 29,
+    cor: "verde",
+    localizacao: "São Paulo"
+}
+
+const pZe = {
+    nome: 'zé',
+    idade: 28,
+    cor: 'verde',
+    localizacao: 'Curitiba'
+}
+
+const normalizarPessoa = (pessoa) => {
+    return [
+        pessoa.idade / 100, // Normaliza a idade dividindo por 100 ? 
+        pessoa.cor === "azul" ? 1 : 0,
+        pessoa.cor === "vermelho" ? 1 : 0,
+        pessoa.cor === "verde" ? 1 : 0,
+        pessoa.localizacao === "São Paulo" ? 1 : 0,
+        pessoa.localizacao === "Rio" ? 1 : 0,
+        pessoa.localizacao === "Curitiba" ? 1 : 0
+    ]
+}
+
+// Normalizando os dados da pessoa para que o modelo possa entender aaa
+const pRebecaNormalizada = normalizarPessoa(pRebeca);
+const pZeNormalizado = [
+    0.2,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1
+];
+
+const listaDeInputs = [pZeNormalizado];
+
+const predictions = await predict(myModel, listaDeInputs);
+
+const results = predictions
+    .sort((a, b) => b.prob - a.prob)
+    .map(({ label, prob }) => `${label}: ${(prob * 100).toFixed(2)}%`)
+    .join('\n');
+console.log(results);
