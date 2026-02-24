@@ -52,13 +52,16 @@ function makeContext(products, users) {
         })
     })
 
-    const productAvgAgeNorm = Object.fromEntries(
+    const productAvgAge = Object.fromEntries(
         products.map(product => {
             const avg = ageCounts[product.name] ?
                 ageSums[product.name] / ageCounts[product.name] :
                 midAge
 
-            return [product.name, normalize(avg, minAge, maxAge)]
+            return [product.name, avg] 
+            // Fiz isso pq tava confusa se ja tinha normalizado ou nao o vetor 
+            // e tava na duvida se normalizaria 2x por causa do BuildVector
+            // Desse jeito eu só salvo a média (nao normalizada ainda)
         })
     )
 
@@ -67,7 +70,7 @@ function makeContext(products, users) {
         users,
         colorsIndex,
         categoriesIndex,
-        productAvgAgeNorm,
+        productAvgAge,
         minAge,
         maxAge,
         minPrice,
@@ -82,41 +85,57 @@ function makeContext(products, users) {
 const oneHotWeighted = (index, length, weight) =>  // Isso pra categoria/cor virar um numero entre 0 e 1 
     tf.oneHot(index, length).cast('float32').mul(weight)
 
-function encodeProduct(product, context) {
-    const price = tf.tensor1d([
-        normalize(product.price, context.minPrice, context.maxPrice) * WEIGHTS.price
-    ])
+function buildVector(context, { price, age, category, color } = {}) {
+    // Se o valor existir, normaliza e aplica o peso | se não preenche com zero
+    
+    // Preço
+    const priceTensor = price !== undefined ? 
+        tf.tensor1d([normalize(price, context.minPrice, context.maxPrice) * WEIGHTS.price]) : 
+        tf.zeros([1]);
 
-    const age = tf.tensor1d([
-        (
-            context.productAvgAgeNorm[product.name] ?? 0.5       // 0.5 é pra caso nao tenha calculo da media para aquele produto 
-        ) * WEIGHTS.age
-    ])
+    // Idade (seja do usuário ou a média do produto)
+    // Quando for usuario eu passo a idade dele
+    // Quando for produto eu passo a média de idade dos usuarios que compraram ele
+    
+    const ageValue = age !== undefined ? age : (context.minAge + context.maxAge) / 2;
+    const ageTensor = tf.tensor1d([
+        normalize(ageValue, context.minAge, context.maxAge) * WEIGHTS.age
+    ]);
 
-    const category = oneHotWeighted(context.categoriesIndex[product.category], context.numCategories, WEIGHTS.category);
+    // Categoria
+    const categoryTensor = category !== undefined ?
+        oneHotWeighted(context.categoriesIndex[category], context.numCategories, WEIGHTS.category) :
+        tf.zeros([context.numCategories]);
 
-    const color = oneHotWeighted(context.colorsIndex[product.color], context.numColors, WEIGHTS.color); 
+    // Cor
+    const colorTensor = color !== undefined ?
+        oneHotWeighted(context.colorsIndex[color], context.numColors, WEIGHTS.color) :
+        tf.zeros([context.numColors]);
 
-    return tf.concat1d([price, age, category, color])
+    return tf.concat1d([priceTensor, ageTensor, categoryTensor, colorTensor]);
 }
+
+function encodeProduct(product, context) {
+    return buildVector(context, {
+        price: product.price,
+        age: context.productAvgAge[product.name], // Passando valor bruto
+        category: product.category,
+        color: product.color
+    });
+}
+
 
 function encodeUser(user, context) {
     if (user.purchases.length) {
         return tf.stack(
             user.purchases.map(product => encodeProduct(product, context))
         ).mean(0)
-        .reshape([1, context.dimentions]) // pra garantir q tem as mesmas dimensoes certim tipassim [1,0,0,0,0,1,0] 
+        .reshape([1, context.dimentions])
     }
 
-    return tf.concat1d([
-        tf.zeros([1]), // ignorando preço
-        tf.tensor1d(
-            [normalize(user.age, context.minAge, context.maxAge) * WEIGHTS.age]
-        ),
-        tf.zeros([context.numCategories]), // ignorar categoria
-        tf.zeros([context.numColors]) //  ignorar cores
-    ])
-    .reshape([1, context.dimentions])
+    // Agora é automático! Se novos campos surgirem, o buildVector cuida de por zeros
+    return buildVector(context, { age: user.age })
+        .reshape([1, context.dimentions]);
 }
 
 function createTrainingData(context) {
