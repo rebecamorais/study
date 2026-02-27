@@ -129,6 +129,20 @@ Este glossário contém termos fundamentais, conceitos técnicos e padrões de d
 - **Latency (Latência)**: O tempo de espera entre enviar a pergunta e começar a receber a resposta.
 - **Temperature (Temperatura)**: Define o quão criativa (alta) ou lógica (baixa) a IA será.
 - **System Prompt**: Instrução mestre que define a personalidade e regras da IA antes da conversa.
+- **Warmup (Aquecimento)**: Execução inicial com dados "falsos" para preparar o navegador (compilação de shaders e alocação de memória na GPU). Evita que a primeira predição real pareça "travada".
+- **Inference (Inferência)**: O momento em que a IA usa o que aprendeu para "adivinhar" ou prever algo sobre um dado novo (ex: identificar onde está o pato na imagem).
+
+- **Scores (Confiança)**: Um número de 0 a 1 que indica o quão "certeza" a IA tem de que aquele objeto é o que ela diz ser. Ex: 0.95 significa 95% de certeza.
+
+- **tf.dispose()**: Comando manual para liberar memória da GPU no TensorFlow.js. Essencial para evitar que o navegador trave por falta de memória.
+- **tf.tidy()**: A "faxina automática". Limpa todos os tensores criados dentro de uma função, exceto aquele que for retornado. Evita ter que dar `tf.dispose()` em cada variável intermediária.
+- **dataSync() / arraySync()**: Comandos para "baixar" os dados da GPU para o JavaScript. Sem eles, você vê apenas o objeto Tensor (metadados). O `dataSync` retorna um array plano e o `arraySync` mantém a estrutura de "ninhos" (ex: `[ [x, y] ]`).
+- **tf.browser.fromPixels()**: O "tradutor" que converte uma imagem do navegador (pixels coloridos) em uma matriz de números (Tensor) que a IA consegue processar.
+- **Batch (Lote)**: A primeira dimensão de um Tensor 4D `[Batch, H, W, 3]`. Indica quantos itens a IA vai processar de uma só vez. Mesmo para uma única imagem, o modelo exige essa dimensão (que vira `1`).
+- **expandDims(0)**: Comando que adiciona uma dimensão "vazia" no início do Tensor. Transforma uma imagem `[640, 640, 3]` no formato de lote `[1, 640, 640, 3]` que o modelo espera.
+- **Normalização (div 255)**: Processo de ajustar os valores (originalmente de 0 a 255) para uma escala menor (geralmente de 0 a 1). Isso facilita os cálculos matemáticos da IA e torna o treinamento/inferência mais estável.
+- **Shape (Formato) [H, W, 3]**: A estrutura de uma imagem na IA. **H** (Height/Altura), **W** (Width/Largura) e **3** (canais RGB - Vermelho, Verde e Azul). É como uma grade onde cada célula tem 3 valores de cor.
+- **Garbage Collector (GC)**: O "faxineiro" automático do JavaScript que limpa a memória RAM. Ele não limpa a GPU, por isso precisamos do `tf.dispose()`.
 - **🔌 MCP (Model Context Protocol)**: Padrão "tomada universal" para conectar IAs a dados locais e ferramentas com segurança.
 
 ### O Ecossistema
