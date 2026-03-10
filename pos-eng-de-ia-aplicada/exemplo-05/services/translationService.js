@@ -6,15 +6,10 @@ export class TranslationService {
 
     async initialize() {
         try {
+            // Tentando inicializar. Se precisar de download, o Chrome pode dar NotAllowedError no onload
             this.translator = await Translator.create({
                 sourceLanguage: 'en',
-                targetLanguage: 'pt',
-                monitor(m) {
-                    m.addEventListener('downloadprogress', (e) => {
-                        const percent = ((e.loaded / e.total) * 100).toFixed(0);
-                        console.log(`Translator downloaded ${percent}%`);
-                    });
-                }
+                targetLanguage: 'pt'
             });
             console.log('Translator initialized');
 
@@ -23,8 +18,13 @@ export class TranslationService {
 
             return true;
         } catch (error) {
+            if (error.name === 'NotAllowedError') {
+                console.warn('Tradução precisa de interação do usuário para baixar. Use o botão "Forçar Download".');
+                return false;
+            }
             console.error('Error initializing translation:', error);
-            throw new Error('⚠️ Erro ao inicializar APIs de tradução.');
+            // Em vez de dar throw e travar tudo, apenas retornamos false
+            return false;
         }
     }
 

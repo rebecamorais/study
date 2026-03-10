@@ -27,9 +27,27 @@ body {
 h1 {
     text-align: center;
     color: #34d399;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     font-size: 2em;
     text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+}
+
+#force-download-btn {
+    background: #1a1a1a;
+    color: #34d399;
+    border: 1px solid #34d399;
+    padding: 10px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#force-download-btn:hover {
+    background: #34d399;
+    color: #1a1a1a;
+    box-shadow: 0 0 15px rgba(52, 211, 153, 0.4);
 }
 
 .parameters {

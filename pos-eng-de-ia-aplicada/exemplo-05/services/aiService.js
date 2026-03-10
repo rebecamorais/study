@@ -94,71 +94,83 @@ export class AIService {
     }
 
     async getParams() {
-        const params = await LanguageModel.params();
-        console.log('Language Model Params:', params);
-        return params;
+        try {
+            // No seu Chrome Canary, LanguageModel não tem .params() nem .capabilities()
+            // Então retornamos valores padrão para a interface (sliders) não quebrar
+            return { 
+                defaultTemperature: 1, 
+                defaultTopK: 3, 
+                maxTopK: 128, 
+                maxTemperature: 2 
+            };
+        } catch (e) {
+            return { defaultTemperature: 1, defaultTopK: 3 };
+        }
     }
 
     async* createSession(question, temperature, topK, file = null) {
         this.abortController?.abort();
         this.abortController = new AbortController();
 
-        // Destroy previous session and create new one with updated parameters
         if (this.session) {
             this.session.destroy();
         }
 
+        // Adicionando expectedInputs para avisar ao Chrome que vamos enviar imagens
         this.session = await LanguageModel.create({
-            expectedInputs: [
-                { type: "text", languages: ["en"] },
-                { type: "audio" },
-                { type: "image" },
-            ],
-            expectedOutputs: [{ type: "text", languages: ["en"] }],
             temperature: temperature,
             topK: topK,
+            expectedOutputLanguages: ["en"],
+            expectedInputs: [
+                { type: "text" },
+                { type: "image" }
+            ],
             initialPrompts: [
                 {
                     role: 'system',
                     content: [{
                         type: "text",
-                        value: `You are an AI assistant that responds clearly and objectively.
-                        Always respond in plain text format instead of markdown.`
+                        value: `You are an AI assistant that responds clearly and objectively. Always respond in plain text.`
                     }]
                 },
             ],
         });
 
-        // Build content array with text and optional file
-        const contentArray = [{ type: "text", value: question }];
+        try {
+            let prompt;
 
-        if (file) {
-            const fileType = file.type.split('/')[0];
-            if (fileType === 'image' || fileType === 'audio') {
-                // Convert file to blob for proper handling
+            if (file) {
+                // Se houver arquivo, usamos o formato de array (multimodal)
+                const fileType = file.type.split('/')[0];
                 const blob = new Blob([await file.arrayBuffer()], { type: file.type });
-                contentArray.push({ type: fileType, value: blob });
-                console.log(`Adding ${fileType} to prompt:`, file.name);
+                
+                prompt = [
+                    {
+                        role: 'user',
+                        content: [
+                            { type: "text", value: question },
+                            { type: fileType, value: blob }
+                        ],
+                    },
+                ];
+                console.log(`Enviando prompt multimodal com ${fileType}:`, file.name);
+            } else {
+                // Se for apenas texto, enviamos a string direta. 
+                // Isso evita o erro "Required member is undefined" em algumas versões do Canary.
+                prompt = question;
             }
-        }
 
-        const responseStream = await this.session.promptStreaming(
-            [
-                {
-                    role: 'user',
-                    content: contentArray,
-                },
-            ],
-            {
+            const responseStream = await this.session.promptStreaming(prompt, {
                 signal: this.abortController.signal,
-            }
-        );
+            });
 
-        for await (const chunk of responseStream) {
-            if (this.abortController.signal.aborted) {
-                break;
+            for await (const chunk of responseStream) {
+                if (this.abortController.signal.aborted) break;
+                yield chunk;
             }
-            yield chunk;
+        } catch (e) {
+            console.error('Erro ao processar prompt:', e);
+            yield `[Erro]: ${e.message}`;
         }
     }
 
