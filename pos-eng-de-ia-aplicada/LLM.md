@@ -189,3 +189,32 @@ Um LLM:
 7. Gera o texto **token por token (sampling)**
 
 > Ele **não entende como nós entendemos**, mas consegue gerar texto coerente e útil baseado em padrões aprendidos.
+
+
+## 1. Arquitetura de Transformers e Processamento de Linguagem
+O entendimento da arquitetura **Transformer** é fundamental para trabalhar com LLMs modernas.
+* **Self-Attention (Auto-atenção):** Mecanismo que permite ao modelo atribuir pesos de importância a diferentes partes de uma sequência, resolvendo ambiguidades contextuais e referências (anáforas).
+* **Embeddings Posicionais:** Como os modelos mantêm a noção de ordem das palavras em uma arquitetura que processa dados em paralelo.
+* **Componentes de Pipeline:** A jornada do dado desde a **Tokenização** (transformação em unidades discretas) até o **Decoding** e as estratégias de **Sampling** (Top-K, Top-P e Temperature).
+
+## 2. Recuperação de Informação e GraphRAG
+A integração entre bancos de dados e LLMs (RAG) foca em reduzir alucinações e fornecer dados privados.
+* **Bancos de Dados Vetoriais (Vector DBs):** O uso do **Neo4j** para armazenar chunks como nós e embeddings como propriedades, permitindo buscas por similaridade semântica.
+* **Estratégias de Chunking:** A importância da fragmentação de documentos em pedaços coerentes com **overlap** (sobreposição) para manter o contexto e maximizar a precisão da recuperação.
+* **Busca Vetorial e Top-K:** O ajuste fino de quantos documentos devem ser retornados para equilibrar o custo de tokens e a relevância da resposta.
+
+## 3. Representação de Dados e Engenharia de Features
+Fundamentos de como máquinas interpretam dados do mundo real.
+* **One-hot Encoding:** Técnica de codificação para transformar categorias discretas em vetores binários (0 e 1), evitando que o modelo interprete ordens de grandeza inexistentes entre categorias.
+* **Vetores de Embedding:** A representação de texto em espaços multidimensionais para cálculos de similaridade.
+
+## 4. Paradigmas de Aprendizado e Otimização
+Diferentes formas de treinar e evoluir sistemas inteligentes.
+* **Algoritmos Genéticos:** Processo iterativo de busca baseado na evolução biológica (Seleção, Crossover e Mutação).
+* **Aprendizado por Reforço (RL):** O ciclo de aprendizado baseado em Agente, Ambiente e o feedback de **Recompensas/Punições** (Tentativa e Erro).
+* **Quantização de Modelos:** Técnicas para rodar modelos pesados em hardware limitado (ex: navegadores via WebLLM), comprimindo pesos (ex: 4 bits) enquanto mantém cálculos intermediários em alta precisão (f32).
+
+## 5. Parâmetros de Inferência
+Ajustes que controlam o comportamento da saída do modelo:
+* **Temperature:** Controle de aleatoriedade/criatividade.
+* **Top-K e Top-P:** Filtros de probabilidade para seleção de tokens.
